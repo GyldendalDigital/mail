@@ -24,6 +24,8 @@ module Mail
   # 
   # On encoding, the body will return the preamble, then each part joined by
   # the boundary, followed by a closing boundary string and then the epilogue.
+  #
+  # The character set of text bodies is set according to content_type and charset.
   class Body
 
     def initialize(string = '')
@@ -31,6 +33,7 @@ module Mail
       @preamble = nil
       @epilogue = nil
       @charset  = nil
+      @content_type = nil
       @part_sort_order = [ "text/plain", "text/enriched", "text/html" ]
       @parts = Mail::PartsList.new
       if Utilities.blank?(string)
@@ -164,7 +167,6 @@ module Mail
             # from base64 to Q-P and vice versa
             decoded = dec.decode(raw_source)
             if defined?(Encoding) && charset && charset != "US-ASCII"
-              decoded.encode!(charset)
               decoded.force_encoding('BINARY') unless Encoding.find(charset).ascii_compatible?
             end
             enc.encode(decoded)
@@ -176,8 +178,24 @@ module Mail
       if !Encodings.defined?(encoding)
         raise UnknownEncodingType, "Don't know how to decode #{encoding}, please call #encoded and decode it yourself."
       else
-        Encodings.get_encoding(encoding).decode(raw_source)
+        decoded_body = Encodings.get_encoding(encoding).decode(raw_source)
+        charset_encoding = if self.charset then
+                             begin
+                               Encoding.find(charset)
+                             rescue
+                               STDERR.puts("Unsupported charset #{charset.inspect}")
+                               nil
+                             end
+                           end
+        if !!charset_encoding && self.text? && decoded_body.encoding == Encoding::ASCII_8BIT then
+          decoded_body.force_encoding(charset_encoding)
+        end
+        decoded_body
       end
+    end
+
+    def text?
+      !!self.content_type ? !!(self.content_type =~ /^text/i) : false
     end
     
     def to_s
@@ -190,6 +208,14 @@ module Mail
     
     def charset=( val )
       @charset = val
+    end
+    
+    def content_type
+      @content_type
+    end
+    
+    def content_type=( val )
+      @content_type = val
     end
 
     def encoding(val = nil)
@@ -268,7 +294,8 @@ module Mail
     end
 
     def only_us_ascii?
-      !(raw_source =~ /[^\x01-\x7f]/)
+      encoding_neutral_raw_source = raw_source.dup.force_encoding(Encoding::BINARY)
+      !(encoding_neutral_raw_source =~ /[^\x01-\x7f]/)
     end
     
     def empty?

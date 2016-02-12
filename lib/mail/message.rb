@@ -2039,6 +2039,20 @@ module Mail
       if has_content_transfer_encoding?
         @body.encoding = content_transfer_encoding
       end
+      if has_charset? && has_content_type? && text? then
+        charset_encoding = if self.charset then
+                             begin
+                               Encoding.find(self.charset)
+                             rescue
+                               STDERR.puts("Unsupported charset #{charset.inspect}")
+                               nil
+                             end
+                           end
+        if charset_encoding and ! charset_encoding.dummy? then
+          @body.charset = self.charset
+          @body.content_type = self.content_type
+        end
+      end
     end
 
     def identify_and_set_transfer_encoding

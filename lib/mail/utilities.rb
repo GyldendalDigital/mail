@@ -270,7 +270,15 @@ module Mail
       if value.kind_of?(NilClass)
         true
       elsif value.kind_of?(String)
-        value !~ /\S/
+        if value.encoding.dummy? then
+          # An encoding where there might not be a definition of space.
+          raw_value = value.dup
+          raw_value.force_encoding(Encoding::BINARY)
+          raw_value !~ Regexp.new('\S')
+        else # An encoding with space defined
+          target_encoding = value.encoding
+          value !~ Regexp.new('\S'.encode(target_encoding))
+        end
       else
         value.respond_to?(:empty?) ? value.empty? : !value
       end

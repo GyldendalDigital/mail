@@ -255,7 +255,11 @@ describe "Test emails" do
       expect(mail.from).to eq ["atsushi@example.com"]
       expect(mail.subject).to eq "Re: TEST テストテスト"
       expect(mail.message_id).to eq '0CC5E11ED2C1D@example.com'
+      expect(mail.charset).to eq 'iso-2022-jp'
       expect(mail.body.decoded).to eq "Hello\n"
+      # Since the iso-2022-jp charset is a dummy charset (not fully implemented in Ruby)
+      # The returned text string encoded as binary.
+      expect(mail.body.decoded.encoding).to eq Encoding::BINARY
     end
   end
 
