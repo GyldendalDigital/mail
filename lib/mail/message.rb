@@ -2020,6 +2020,9 @@ module Mail
       if has_content_transfer_encoding?
         @body.encoding = content_transfer_encoding
       end
+      if has_charset? then
+        @body.charset = charset
+      end
     end
 
     def identify_and_set_transfer_encoding

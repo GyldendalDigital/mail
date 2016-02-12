@@ -176,7 +176,16 @@ module Mail
       if !Encodings.defined?(encoding)
         raise UnknownEncodingType, "Don't know how to decode #{encoding}, please call #encoded and decode it yourself."
       else
-        Encodings.get_encoding(encoding).decode(raw_source)
+        decoded_body = Encodings.get_encoding(encoding).decode(raw_source)
+        if charset then
+          charset_encoding = begin
+                               Encoding.find(charset)
+                             rescue
+                               STDERR.puts("Unsupported charset #{charset.inspect}")
+                               nil
+                             end
+          decoded_body.force_encoding(charset) if charset_encoding
+        end
       end
     end
     
